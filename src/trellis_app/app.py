@@ -39,13 +39,13 @@ image = (
         "git clone https://github.com/JeffreyXiang/FlexGEMM.git /tmp/FlexGEMM --recursive",
     )
     .run_commands(
-        "CUDA_HOME=/usr/local/cuda-12.4 pip install /tmp/CuMesh --no-build-isolation",
-        "CUDA_HOME=/usr/local/cuda-12.4 pip install /tmp/FlexGEMM --no-build-isolation",
-        "CUDA_HOME=/usr/local/cuda-12.4 pip install /tmp/nvdiffrast --no-build-isolation",
-        "CUDA_HOME=/usr/local/cuda-12.4 pip install /tmp/nvdiffrec --no-build-isolation",
+        "TORCH_CUDA_ARCH_LIST='8.0;9.0' CUDA_HOME=/usr/local/cuda-12.4 pip install /tmp/CuMesh --no-build-isolation",
+        "TORCH_CUDA_ARCH_LIST='8.0;9.0' CUDA_HOME=/usr/local/cuda-12.4 pip install /tmp/FlexGEMM --no-build-isolation",
+        "TORCH_CUDA_ARCH_LIST='8.0;9.0' CUDA_HOME=/usr/local/cuda-12.4 pip install /tmp/nvdiffrast --no-build-isolation",
+        "TORCH_CUDA_ARCH_LIST='8.0;9.0' CUDA_HOME=/usr/local/cuda-12.4 pip install /tmp/nvdiffrec --no-build-isolation",
     )
     .run_commands(
-        "CUDA_HOME=/usr/local/cuda-12.4 pip install /trellis2_src/o-voxel --no-build-isolation",
+        "TORCH_CUDA_ARCH_LIST='8.0;9.0' CUDA_HOME=/usr/local/cuda-12.4 pip install /trellis2_src/o-voxel --no-build-isolation",
         "pip install flash-attn==2.7.3",
     )
     .env({"PYTHONPATH": "/trellis2_src"})

@@ -38,7 +38,7 @@ image = (
     )
     .pip_install(
         "numpy", "imageio", "imageio-ffmpeg", "tqdm", "easydict",
-        "opencv-python-headless", "ninja", "trimesh", "transformers==4.48.2",
+        "opencv-python-headless", "ninja", "trimesh", "transformers==4.57.3",
         "kornia", "timm==1.0.14", "zstandard", "plyfile", "wheel", "setuptools",
     )
     .run_commands(

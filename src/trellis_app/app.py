@@ -24,9 +24,9 @@ image = (
         "pip install torch==2.6.0 torchvision==0.21.0 --index-url https://download.pytorch.org/whl/cu124",
     )
     .pip_install(
-        "imageio", "imageio-ffmpeg", "tqdm", "easydict",
+        "numpy", "imageio", "imageio-ffmpeg", "tqdm", "easydict",
         "opencv-python-headless", "ninja", "trimesh", "transformers",
-        "kornia", "timm", "zstandard",
+        "kornia", "timm", "zstandard", "plyfile", "wheel", "setuptools",
     )
     .run_commands(
         "pip install git+https://github.com/EasternJournalist/utils3d.git@9a4eb15e4021b67b12c460c7057d642626897ec8",
@@ -39,13 +39,13 @@ image = (
         "git clone https://github.com/JeffreyXiang/FlexGEMM.git /tmp/FlexGEMM --recursive",
     )
     .run_commands(
-        "pip install /tmp/CuMesh",
-        "pip install /tmp/FlexGEMM",
-        "pip install /tmp/nvdiffrast",
-        "pip install /tmp/nvdiffrec",
+        "CUDA_HOME=/usr/local/cuda-12.4 pip install /tmp/CuMesh --no-build-isolation",
+        "CUDA_HOME=/usr/local/cuda-12.4 pip install /tmp/FlexGEMM --no-build-isolation",
+        "CUDA_HOME=/usr/local/cuda-12.4 pip install /tmp/nvdiffrast --no-build-isolation",
+        "CUDA_HOME=/usr/local/cuda-12.4 pip install /tmp/nvdiffrec --no-build-isolation",
     )
     .run_commands(
-        "pip install /trellis2_src/o-voxel",
+        "CUDA_HOME=/usr/local/cuda-12.4 pip install /trellis2_src/o-voxel --no-build-isolation",
         "pip install flash-attn==2.7.3",
     )
     .env({"PYTHONPATH": "/trellis2_src"})

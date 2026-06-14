@@ -80,15 +80,12 @@ HUGGINGFACE_CACHE = "/hf-cache"
     scaledown_window=60,
 )
 class TrellisGenerator:
-    def __init__(self):
+    @modal.enter()
+    def load_pipeline(self):
         os.environ["HF_HOME"] = HUGGINGFACE_CACHE
         os.environ["HF_HUB_CACHE"] = f"{HUGGINGFACE_CACHE}/hub"
         os.environ["OPENCV_IO_ENABLE_OPENEXR"] = "1"
         os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
-        self.pipeline = None
-
-    @modal.enter()
-    def load_pipeline(self):
         from trellis2.pipelines import Trellis2ImageTo3DPipeline
         self.pipeline = Trellis2ImageTo3DPipeline.from_pretrained(
             "microsoft/TRELLIS.2-4B",

@@ -65,7 +65,7 @@ image = (
         "pip install flash-attn==2.7.3",
     )
     .env({"PYTHONPATH": "/trellis2_src"})
-    .pip_install("modal", "boto3", "Pillow", "diffusers")
+    .pip_install("modal", "boto3", "Pillow", "diffusers", "accelerate")
 )
 
 app = modal.App("trellis-3d", image=image)
@@ -127,7 +127,7 @@ class TrellisGenerator:
         torch.cuda.empty_cache()
 
         print("[2/3] Generating 3D geometry + PBR materials...")
-        mesh = self.pipeline.run(image, seed=seed, preprocess_image=True)[0]
+        mesh = self.pipeline.run(image, seed=seed, preprocess_image=False)[0]
         mesh.simplify(2_000_000)
 
         print("[3/3] Exporting GLB...")

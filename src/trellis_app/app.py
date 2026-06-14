@@ -55,7 +55,7 @@ HUGGINGFACE_CACHE = "/hf-cache"
 @app.cls(
     gpu="A100",
     timeout=900,
-    secrets=[modal.Secret.from_name("r2-credentials", required=True)],
+    secrets=[modal.Secret.from_name("r2-credentials")],
     volumes={HUGGINGFACE_CACHE: model_volume},
     container_idle_timeout=60,
 )

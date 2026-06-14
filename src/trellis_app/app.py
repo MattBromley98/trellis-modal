@@ -1,9 +1,12 @@
 import os
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import modal
 
-from .r2 import upload_glb
+from trellis_app.r2 import upload_glb
 
 TRELLIS2_REPO = "https://github.com/microsoft/TRELLIS.2.git"
 

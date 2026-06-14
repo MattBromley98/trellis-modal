@@ -33,14 +33,20 @@ image = (
     )
     .run_commands(
         f"git clone {TRELLIS2_REPO} /trellis2_src --recursive",
+        "git clone -b v0.4.0 https://github.com/NVlabs/nvdiffrast.git /tmp/nvdiffrast",
+        "git clone -b renderutils https://github.com/JeffreyXiang/nvdiffrec.git /tmp/nvdiffrec",
+        "git clone https://github.com/JeffreyXiang/CuMesh.git /tmp/CuMesh --recursive",
+        "git clone https://github.com/JeffreyXiang/FlexGEMM.git /tmp/FlexGEMM --recursive",
     )
     .run_commands(
-        "pip install /trellis2_src/o-voxel --no-build-isolation",
+        "pip install /tmp/CuMesh",
+        "pip install /tmp/FlexGEMM",
+        "pip install /tmp/nvdiffrast",
+        "pip install /tmp/nvdiffrec",
+    )
+    .run_commands(
+        "pip install /trellis2_src/o-voxel",
         "pip install flash-attn==2.7.3",
-        "git clone -b v0.4.0 https://github.com/NVlabs/nvdiffrast.git /tmp/nvdiffrast && pip install /tmp/nvdiffrast --no-build-isolation",
-        "git clone -b renderutils https://github.com/JeffreyXiang/nvdiffrec.git /tmp/nvdiffrec && pip install /tmp/nvdiffrec --no-build-isolation",
-        "git clone https://github.com/JeffreyXiang/CuMesh.git /tmp/CuMesh --recursive && pip install /tmp/CuMesh --no-build-isolation",
-        "git clone https://github.com/JeffreyXiang/FlexGEMM.git /tmp/FlexGEMM --recursive && pip install /tmp/FlexGEMM --no-build-isolation",
     )
     .env({"PYTHONPATH": "/trellis2_src"})
     .pip_install("modal", "boto3", "Pillow", "diffusers")

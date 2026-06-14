@@ -1,7 +1,7 @@
 [project]
 name = "trellis-app"
-version = "0.1.0"
-description = "Generate 3D models from text prompts using TRELLIS on Modal, stored in Cloudflare R2"
+version = "0.2.0"
+description = "Generate 3D models from text prompts using TRELLIS.2 on Modal, stored in Cloudflare R2"
 requires-python = ">=3.11"
 dependencies = [
     "modal>=1.0",

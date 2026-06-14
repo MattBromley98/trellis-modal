@@ -1,60 +1,45 @@
 import os
-import sys
 from pathlib import Path
 
 import modal
 
-from .generate import generate_glb
 from .r2 import upload_glb
 
-TRELLIS_REPO = "https://github.com/microsoft/TRELLIS.git"
+TRELLIS2_REPO = "https://github.com/microsoft/TRELLIS.2.git"
 
 image = (
-    modal.Image.debian_slim(python_version="3.11")
+    modal.Image.from_registry(
+        "nvidia/cuda:12.4.0-devel-ubuntu22.04",
+        add_python="3.11",
+    )
     .apt_install(
-        "git", "wget", "build-essential", "ninja-build", "cmake",
-        "cuda-toolkit-12-4",
-        "libgl1-mesa-glx", "libglib2.0-0", "libsm6", "libxext6",
-        "libxrender-dev", "libgomp1", "libegl1", "libxkbcommon0",
-        "libegl1-mesa", "libgles2", "libglvnd0",
+        "git", "ninja-build", "cmake", "libjpeg-dev",
+        "libgl1-mesa-glx", "libglib2.0-0", "libegl1", "libgles2",
+        "libglvnd0", "libxkbcommon0", "libsm6", "libxext6",
     )
-    .pip_install("torch==2.4.0", "torchvision==0.19.0",
-                 "--index-url", "https://download.pytorch.org/whl/cu121")
-    .pip_install("xformers==0.0.27.post2",
-                 "--index-url", "https://download.pytorch.org/whl/cu121")
-    .pip_install("flash-attn==2.6.3")
-    .run_commands(
-        f"git clone --recurse-submodules {TRELLIS_REPO} /trellis",
-    )
+    .pip_install("torch==2.6.0", "torchvision==0.21.0",
+                 "--index-url", "https://download.pytorch.org/whl/cu124")
     .pip_install(
-        "pillow",
-        "imageio",
-        "imageio-ffmpeg",
-        "tqdm",
-        "easydict",
-        "opencv-python-headless",
-        "scipy",
-        "ninja",
-        "trimesh",
-        "open3d",
-        "xatlas",
-        "pyvista",
-        "pymeshfix",
-        "igraph",
-        "transformers",
-        "rembg",
-        "onnxruntime",
+        "imageio", "imageio-ffmpeg", "tqdm", "easydict",
+        "opencv-python-headless", "ninja", "trimesh", "transformers",
+        "kornia", "timm", "zstandard",
     )
     .run_commands(
         "pip install git+https://github.com/EasternJournalist/utils3d.git@9a4eb15e4021b67b12c460c7057d642626897ec8",
-        "pip install spconv-cu120",
-        "pip install kaolin -f https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.4.0_cu121.html",
-        "git clone https://github.com/NVlabs/nvdiffrast.git /tmp/nvdiffrast && pip install /tmp/nvdiffrast",
-        "git clone --recurse-submodules https://github.com/JeffreyXiang/diffoctreerast.git /tmp/diffoctreerast && pip install /tmp/diffoctreerast",
-        "git clone https://github.com/autonomousvision/mip-splatting.git /tmp/mip-splatting && pip install /tmp/mip-splatting/submodules/diff-gaussian-rasterization/",
     )
-    .env({"PYTHONPATH": "/trellis"})
-    .pip_install("modal", "boto3", "Pillow")
+    .run_commands(
+        f"git clone {TRELLIS2_REPO} /trellis2_src --recursive",
+    )
+    .run_commands(
+        "pip install /trellis2_src/o-voxel --no-build-isolation",
+        "pip install flash-attn==2.7.3",
+        "git clone -b v0.4.0 https://github.com/NVlabs/nvdiffrast.git /tmp/nvdiffrast && pip install /tmp/nvdiffrast --no-build-isolation",
+        "git clone -b renderutils https://github.com/JeffreyXiang/nvdiffrec.git /tmp/nvdiffrec && pip install /tmp/nvdiffrec --no-build-isolation",
+        "git clone https://github.com/JeffreyXiang/CuMesh.git /tmp/CuMesh --recursive && pip install /tmp/CuMesh --no-build-isolation",
+        "git clone https://github.com/JeffreyXiang/FlexGEMM.git /tmp/FlexGEMM --recursive && pip install /tmp/FlexGEMM --no-build-isolation",
+    )
+    .env({"PYTHONPATH": "/trellis2_src"})
+    .pip_install("modal", "boto3", "Pillow", "diffusers")
 )
 
 app = modal.App("trellis-3d", image=image)
@@ -66,46 +51,84 @@ HUGGINGFACE_CACHE = "/hf-cache"
 
 @app.cls(
     gpu="A100",
-    timeout=600,
+    timeout=900,
     secrets=[modal.Secret.from_name("r2-credentials", required=True)],
     volumes={HUGGINGFACE_CACHE: model_volume},
     container_idle_timeout=60,
 )
 class TrellisGenerator:
     def __init__(self):
-        os.environ["SPCONV_ALGO"] = "native"
         os.environ["HF_HOME"] = HUGGINGFACE_CACHE
         os.environ["HF_HUB_CACHE"] = f"{HUGGINGFACE_CACHE}/hub"
-        self.model_name = os.environ.get("TRELLIS_MODEL", "microsoft/TRELLIS-text-xlarge")
+        os.environ["OPENCV_IO_ENABLE_OPENEXR"] = "1"
+        os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+        self.pipeline = None
 
     @modal.enter()
     def load_pipeline(self):
-        from trellis.pipelines import TrellisTextTo3DPipeline
-        self.pipeline = TrellisTextTo3DPipeline.from_pretrained(self.model_name)
+        from trellis2.pipelines import Trellis2ImageTo3DPipeline
+        self.pipeline = Trellis2ImageTo3DPipeline.from_pretrained(
+            "microsoft/TRELLIS.2-4B",
+        )
         self.pipeline.cuda()
 
     @modal.method()
     def generate(self, prompt: str, seed: int = 42) -> str:
+        import gc
         import tempfile
-        from trellis.utils import postprocessing_utils
 
-        print(f"Generating 3D model for prompt: {prompt!r}")
+        import torch
+        from diffusers import FluxPipeline
 
-        outputs = self.pipeline.run(prompt, seed=seed)
-
-        glb = postprocessing_utils.to_glb(
-            outputs["gaussian"][0],
-            outputs["mesh"][0],
-            simplify=0.95,
-            texture_size=1024,
-        )
+        import o_voxel
 
         out_dir = Path(tempfile.mkdtemp())
+
+        print(f"[1/3] Generating image from prompt: {prompt!r}")
+        pipe = FluxPipeline.from_pretrained(
+            "black-forest-labs/FLUX.1-schnell",
+            torch_dtype=torch.bfloat16,
+        )
+        pipe.to("cuda")
+        gen = torch.Generator("cuda").manual_seed(seed)
+        image = pipe(
+            prompt,
+            guidance_scale=0.0,
+            num_inference_steps=4,
+            max_sequence_length=256,
+            generator=gen,
+        ).images[0]
+        image.save(str(out_dir / "input.png"))
+        del pipe
+        gc.collect()
+        torch.cuda.empty_cache()
+
+        print("[2/3] Generating 3D geometry + PBR materials...")
+        mesh = self.pipeline.run(image, seed=seed, preprocess_image=True)[0]
+        mesh.simplify(2_000_000)
+
+        print("[3/3] Exporting GLB...")
+        glb = o_voxel.postprocess.to_glb(
+            vertices=mesh.vertices,
+            faces=mesh.faces,
+            attr_volume=mesh.attrs,
+            coords=mesh.coords,
+            attr_layout=mesh.layout,
+            voxel_size=mesh.voxel_size,
+            aabb=[[-0.5, -0.5, -0.5], [0.5, 0.5, 0.5]],
+            decimation_target=1_000_000,
+            texture_size=4096,
+            remesh=False,
+            remesh_band=1,
+            remesh_project=0,
+            verbose=False,
+        )
+
         safe_name = prompt.replace(" ", "_")[:64]
         local_path = out_dir / f"{safe_name}.glb"
-        glb.export(str(local_path))
+        glb.export(str(local_path), extension_webp=False)
 
-        print(f"Uploading {local_path} to R2...")
+        print(f"Uploading to R2...")
         url = upload_glb(local_path, prompt)
         print(f"Uploaded to: {url}")
 

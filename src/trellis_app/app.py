@@ -21,7 +21,7 @@ image = (
         "libglvnd0", "libxkbcommon0", "libsm6", "libxext6",
     )
     .pip_install("torch==2.6.0", "torchvision==0.21.0",
-                 "--index-url", "https://download.pytorch.org/whl/cu124")
+                 extra_options=["--index-url", "https://download.pytorch.org/whl/cu124"])
     .pip_install(
         "imageio", "imageio-ffmpeg", "tqdm", "easydict",
         "opencv-python-headless", "ninja", "trimesh", "transformers",

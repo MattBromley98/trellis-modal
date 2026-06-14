@@ -1,12 +1,25 @@
+import hashlib
 import os
-import sys
 from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import modal
 
-from trellis_app.r2 import upload_glb
+
+def _upload_glb(local_path: str | Path, prompt: str) -> str:
+    import boto3
+    path = Path(local_path)
+    prompt_hash = hashlib.sha256(prompt.encode()).hexdigest()[:12]
+    key = f"trellis/{prompt_hash}/{path.name}"
+    s3 = boto3.client(
+        "s3",
+        endpoint_url=os.environ["R2_ENDPOINT"],
+        aws_access_key_id=os.environ["R2_ACCESS_KEY_ID"],
+        aws_secret_access_key=os.environ["R2_SECRET_ACCESS_KEY"],
+        region_name="auto",
+    )
+    s3.upload_file(str(path), os.environ["R2_BUCKET_NAME"], key,
+                   ExtraArgs={"ContentType": "model/gltf-binary"})
+    return f"{os.environ['R2_PUBLIC_URL'].rstrip('/')}/{key}"
 
 TRELLIS2_REPO = "https://github.com/microsoft/TRELLIS.2.git"
 
@@ -139,7 +152,7 @@ class TrellisGenerator:
         glb.export(str(local_path), extension_webp=False)
 
         print(f"Uploading to R2...")
-        url = upload_glb(local_path, prompt)
+        url = _upload_glb(local_path, prompt)
         print(f"Uploaded to: {url}")
 
         return url

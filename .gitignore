@@ -5,7 +5,6 @@ dist/
 build/
 .venv/
 .env
-trellis_src/
 *.glb
 *.mp4
 *.ply

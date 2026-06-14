@@ -2,10 +2,9 @@ import os
 import hashlib
 from pathlib import Path
 
-import boto3
-
 
 def _get_s3_client():
+    import boto3
     return boto3.client(
         "s3",
         endpoint_url=os.environ["R2_ENDPOINT"],

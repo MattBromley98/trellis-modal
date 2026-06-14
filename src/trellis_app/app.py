@@ -38,8 +38,8 @@ image = (
     )
     .pip_install(
         "numpy", "imageio", "imageio-ffmpeg", "tqdm", "easydict",
-        "opencv-python-headless", "ninja", "trimesh", "transformers",
-        "kornia", "timm", "zstandard", "plyfile", "wheel", "setuptools",
+        "opencv-python-headless", "ninja", "trimesh", "transformers==4.48.2",
+        "kornia", "timm==1.0.14", "zstandard", "plyfile", "wheel", "setuptools",
     )
     .run_commands(
         "pip install git+https://github.com/EasternJournalist/utils3d.git@9a4eb15e4021b67b12c460c7057d642626897ec8",
@@ -53,6 +53,7 @@ image = (
     )
     .run_commands(
         "sed -i 's|pipeline.rembg_model = getattr(rembg,.*|pipeline.rembg_model = None|' /trellis2_src/trellis2/pipelines/trellis2_image_to_3d.py",
+        "sed -i 's|self.model.layer|self.model.encoder.layer|' /trellis2_src/trellis2/modules/image_feature_extractor.py",
     )
     .run_commands(
         "CC=gcc CXX=g++ TORCH_CUDA_ARCH_LIST='8.0;9.0' CUDA_HOME=/usr/local/cuda-12.4 pip install /tmp/CuMesh --no-build-isolation",

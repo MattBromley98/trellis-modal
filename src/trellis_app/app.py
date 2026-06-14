@@ -57,7 +57,7 @@ HUGGINGFACE_CACHE = "/hf-cache"
     timeout=900,
     secrets=[modal.Secret.from_name("r2-credentials")],
     volumes={HUGGINGFACE_CACHE: model_volume},
-    container_idle_timeout=60,
+    scaledown_window=60,
 )
 class TrellisGenerator:
     def __init__(self):

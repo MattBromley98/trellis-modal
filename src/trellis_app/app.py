@@ -16,7 +16,7 @@ image = (
         add_python="3.11",
     )
     .apt_install(
-        "git", "ninja-build", "cmake", "libjpeg-dev",
+        "git", "ninja-build", "cmake", "g++", "libjpeg-dev",
         "libgl1-mesa-glx", "libglib2.0-0", "libegl1", "libgles2",
         "libglvnd0", "libxkbcommon0", "libsm6", "libxext6",
     )
@@ -39,13 +39,13 @@ image = (
         "git clone https://github.com/JeffreyXiang/FlexGEMM.git /tmp/FlexGEMM --recursive",
     )
     .run_commands(
-        "TORCH_CUDA_ARCH_LIST='8.0;9.0' CUDA_HOME=/usr/local/cuda-12.4 pip install /tmp/CuMesh --no-build-isolation",
-        "TORCH_CUDA_ARCH_LIST='8.0;9.0' CUDA_HOME=/usr/local/cuda-12.4 pip install /tmp/FlexGEMM --no-build-isolation",
-        "TORCH_CUDA_ARCH_LIST='8.0;9.0' CUDA_HOME=/usr/local/cuda-12.4 pip install /tmp/nvdiffrast --no-build-isolation",
-        "TORCH_CUDA_ARCH_LIST='8.0;9.0' CUDA_HOME=/usr/local/cuda-12.4 pip install /tmp/nvdiffrec --no-build-isolation",
+        "CC=gcc CXX=g++ TORCH_CUDA_ARCH_LIST='8.0;9.0' CUDA_HOME=/usr/local/cuda-12.4 pip install /tmp/CuMesh --no-build-isolation",
+        "CC=gcc CXX=g++ TORCH_CUDA_ARCH_LIST='8.0;9.0' CUDA_HOME=/usr/local/cuda-12.4 pip install /tmp/FlexGEMM --no-build-isolation",
+        "CC=gcc CXX=g++ TORCH_CUDA_ARCH_LIST='8.0;9.0' CUDA_HOME=/usr/local/cuda-12.4 pip install /tmp/nvdiffrast --no-build-isolation",
+        "CC=gcc CXX=g++ TORCH_CUDA_ARCH_LIST='8.0;9.0' CUDA_HOME=/usr/local/cuda-12.4 pip install /tmp/nvdiffrec --no-build-isolation",
     )
     .run_commands(
-        "TORCH_CUDA_ARCH_LIST='8.0;9.0' CUDA_HOME=/usr/local/cuda-12.4 pip install /trellis2_src/o-voxel --no-build-isolation",
+        "CC=gcc CXX=g++ TORCH_CUDA_ARCH_LIST='8.0;9.0' CUDA_HOME=/usr/local/cuda-12.4 pip install /trellis2_src/o-voxel --no-build-isolation",
         "pip install flash-attn==2.7.3",
     )
     .env({"PYTHONPATH": "/trellis2_src"})

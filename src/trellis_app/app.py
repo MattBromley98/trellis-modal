@@ -53,7 +53,6 @@ image = (
     )
     .run_commands(
         "sed -i 's|pipeline.rembg_model = getattr(rembg,.*|pipeline.rembg_model = None|' /trellis2_src/trellis2/pipelines/trellis2_image_to_3d.py",
-        "sed -i 's|self.model.layer|self.model.encoder.layer|' /trellis2_src/trellis2/modules/image_feature_extractor.py",
     )
     .run_commands(
         "CC=gcc CXX=g++ TORCH_CUDA_ARCH_LIST='8.0;9.0' CUDA_HOME=/usr/local/cuda-12.4 pip install /tmp/CuMesh --no-build-isolation",

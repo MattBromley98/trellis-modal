@@ -76,6 +76,9 @@ def generate_glb(
         verbose=False,
     )
 
+    from trellis_app.postprocess import refine_pbr_materials
+    refine_pbr_materials(glb, prompt, verbose=True)
+
     safe_name = prompt.replace(" ", "_")[:64]
     out_path = output_dir / f"{safe_name}.glb"
     glb.export(str(out_path), extension_webp=False)

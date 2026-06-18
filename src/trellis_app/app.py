@@ -1,8 +1,11 @@
 import hashlib
+import logging
 import os
 from pathlib import Path
 
 import modal
+
+logger = logging.getLogger(__name__)
 
 
 def _upload_glb(local_path: str | Path, prompt: str) -> str:
@@ -50,6 +53,15 @@ image = (
         "git clone -b renderutils https://github.com/JeffreyXiang/nvdiffrec.git /tmp/nvdiffrec",
         "git clone https://github.com/JeffreyXiang/CuMesh.git /tmp/CuMesh --recursive",
         "git clone https://github.com/JeffreyXiang/FlexGEMM.git /tmp/FlexGEMM --recursive",
+    )
+    .run_commands(
+        "python3 -c \""
+        "path='/trellis2_src/o-voxel/o_voxel/postprocess.py';"
+        "c=open(path).read();"
+        "c=c.replace('cv2.inpaint(metallic, mask_inv, 1, cv2.INPAINT_TELEA)','cv2.inpaint(metallic, mask_inv, 3, cv2.INPAINT_TELEA)');"
+        "c=c.replace('cv2.inpaint(roughness, mask_inv, 1, cv2.INPAINT_TELEA)','cv2.inpaint(roughness, mask_inv, 3, cv2.INPAINT_TELEA)');"
+        "open(path,'w').write(c); print('Patched o-voxel inpainting radii: metallic/roughness 1 -> 3')"
+        "\"",
     )
     .run_commands(
         "CC=gcc CXX=g++ TORCH_CUDA_ARCH_LIST='8.0;9.0' CUDA_HOME=/usr/local/cuda-12.4 pip install /tmp/CuMesh --no-build-isolation",
@@ -101,6 +113,7 @@ class TrellisGenerator:
         from diffusers import FluxPipeline
 
         import o_voxel
+        from trellis_app.postprocess import refine_pbr_materials
 
         out_dir = Path(tempfile.mkdtemp())
 
@@ -146,6 +159,7 @@ class TrellisGenerator:
 
         safe_name = prompt.replace(" ", "_")[:64]
         local_path = out_dir / f"{safe_name}.glb"
+        refine_pbr_materials(glb, prompt, verbose=True)
         glb.export(str(local_path), extension_webp=False)
 
         print(f"Uploading to R2...")

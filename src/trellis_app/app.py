@@ -83,10 +83,12 @@ model_volume = modal.Volume.from_name("trellis-models", create_if_missing=True)
 
 HUGGINGFACE_CACHE = "/hf-cache"
 
+GPU = os.environ.get("MODAL_GPU", "L40S")
+
 
 @app.cls(
-    gpu="A100",
-    timeout=900,
+    gpu=GPU,
+    timeout=600,
     secrets=[modal.Secret.from_name("r2-credentials")],
     volumes={HUGGINGFACE_CACHE: model_volume},
     scaledown_window=60,
@@ -98,19 +100,35 @@ class TrellisGenerator:
         os.environ["HF_HUB_CACHE"] = f"{HUGGINGFACE_CACHE}/hub"
         os.environ["OPENCV_IO_ENABLE_OPENEXR"] = "1"
         os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+
+        import torch
+        from diffusers import FluxPipeline
         from trellis2.pipelines import Trellis2ImageTo3DPipeline
+
         self.pipeline = Trellis2ImageTo3DPipeline.from_pretrained(
             "microsoft/TRELLIS.2-4B",
         )
         self.pipeline.cuda()
 
+        self.flux = FluxPipeline.from_pretrained(
+            "black-forest-labs/FLUX.1-schnell",
+            torch_dtype=torch.bfloat16,
+        )
+        self.flux.to("cuda")
+
     @modal.method()
-    def generate(self, prompt: str, seed: int = 42, resolution: str = "512") -> str:
+    def generate(
+        self,
+        prompt: str,
+        seed: int = 42,
+        resolution: str = "512",
+        texture_size: int = 1024,
+        decimation_target: int = 10_000,
+    ) -> str:
         import gc
         import tempfile
 
         import torch
-        from diffusers import FluxPipeline
 
         import o_voxel
         from trellis_app.postprocess import refine_pbr_materials
@@ -118,13 +136,10 @@ class TrellisGenerator:
         out_dir = Path(tempfile.mkdtemp())
 
         print(f"[1/3] Generating image from prompt: {prompt!r}")
-        pipe = FluxPipeline.from_pretrained(
-            "black-forest-labs/FLUX.1-schnell",
-            torch_dtype=torch.bfloat16,
-        )
-        pipe.to("cuda")
+        if next(self.flux.parameters()).device.type == "cpu":
+            self.flux.to("cuda")
         gen = torch.Generator("cuda").manual_seed(seed)
-        image = pipe(
+        image = self.flux(
             prompt,
             guidance_scale=0.0,
             num_inference_steps=4,
@@ -132,7 +147,8 @@ class TrellisGenerator:
             generator=gen,
         ).images[0]
         image.save(str(out_dir / "input.png"))
-        del pipe
+
+        self.flux.to("cpu")
         gc.collect()
         torch.cuda.empty_cache()
 
@@ -149,8 +165,8 @@ class TrellisGenerator:
             attr_layout=mesh.layout,
             voxel_size=mesh.voxel_size,
             aabb=[[-0.5, -0.5, -0.5], [0.5, 0.5, 0.5]],
-            decimation_target=10_000,
-            texture_size=1024,
+            decimation_target=decimation_target,
+            texture_size=texture_size,
             remesh=True,
             remesh_band=1,
             remesh_project=0.9,
@@ -170,7 +186,17 @@ class TrellisGenerator:
 
 
 @app.local_entrypoint()
-def main(prompt: str = "a chair", resolution: str = "512"):
+def main(
+    prompt: str = "a chair",
+    resolution: str = "512",
+    texture_size: int = 1024,
+    decimation_target: int = 10_000,
+):
     generator = TrellisGenerator()
-    url = generator.generate.remote(prompt, resolution=resolution)
+    url = generator.generate.remote(
+        prompt,
+        resolution=resolution,
+        texture_size=texture_size,
+        decimation_target=decimation_target,
+    )
     print(f"\nDownload URL: {url}")

@@ -1,4 +1,5 @@
 import argparse
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -18,7 +19,25 @@ def main():
         "--gpu",
         type=str,
         default=None,
-        help="GPU type (e.g., A100, A10G, L40S). Default: A100",
+        help="GPU type (e.g., L40S, A100, H100). Default: L40S",
+    )
+    parser.add_argument(
+        "--resolution",
+        type=str,
+        default=None,
+        help="TRELLIS resolution: 512, 1024, or 1536. Default: 512",
+    )
+    parser.add_argument(
+        "--texture-size",
+        type=int,
+        default=None,
+        help="PBR texture resolution (512 or 1024). Default: 1024",
+    )
+    parser.add_argument(
+        "--decimation-target",
+        type=int,
+        default=None,
+        help="Target triangle count. Default: 10000",
     )
     parser.add_argument(
         "--deploy",
@@ -29,17 +48,24 @@ def main():
 
     app_path = str(Path(__file__).resolve().parent / "app.py")
 
+    if args.gpu:
+        os.environ["MODAL_GPU"] = args.gpu
+
     modal_args = ["modal", "run"]
 
     if args.deploy:
         print("Deploying app...")
         subprocess.run(["modal", "deploy", app_path], check=True)
 
-    if args.gpu:
-        modal_args.extend(["-e", f"MODAL_GPU={args.gpu}"])
-
     modal_args.append(app_path)
     modal_args.extend(["--prompt", args.prompt])
+
+    if args.resolution:
+        modal_args.extend(["--resolution", args.resolution])
+    if args.texture_size:
+        modal_args.extend(["--texture-size", str(args.texture_size)])
+    if args.decimation_target:
+        modal_args.extend(["--decimation-target", str(args.decimation_target)])
 
     sys.exit(subprocess.run(modal_args).returncode)
 

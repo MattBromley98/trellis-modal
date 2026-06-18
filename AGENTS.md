@@ -19,8 +19,10 @@
 - Create it with: `modal volume create trellis-models`
 
 ## GPU
-- **Required: A100 (80GB) or H100.** TRELLIS.2-4B needs ~24GB GPU memory.
-- Minimum GPU memory: 24GB per the official README.
+- **Default: L40S (48GB)** — ~50% cheaper than A100, enough VRAM for FLUX + TRELLIS.
+- Override with `--gpu A100` or `--gpu H100` (for 1536 resolution).
+- TRELLIS.2-4B needs ~24GB GPU memory; FLUX.1-schnell adds ~12GB in bf16.
+- FLUX is loaded once at container start and CPU-offloaded during 3D generation.
 
 ## R2 Egress
 - GLB files are uploaded to the configured R2 bucket with PBR materials.
@@ -38,3 +40,11 @@ The Modal image builds TRELLIS.2 from source:
 - `512` — ~3s on H100, fastest, lower quality
 - `1024` (default) — ~17s on H100, good balance
 - `1536` — ~60s on H100, best quality, requires more VRAM
+
+## CLI options
+- `--prompt` (required) — text prompt
+- `--gpu` — GPU type (default: L40S)
+- `--resolution` — TRELLIS resolution: 512, 1024, 1536 (default: 512)
+- `--texture-size` — PBR texture resolution: 512 or 1024 (default: 1024; 512 is 4x faster)
+- `--decimation-target` — target triangle count (default: 10000)
+- `--deploy` — deploy as persistent app before running

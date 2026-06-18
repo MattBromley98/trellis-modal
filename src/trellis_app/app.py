@@ -75,6 +75,7 @@ image = (
     )
     .env({"PYTHONPATH": "/trellis2_src"})
     .pip_install("modal", "boto3", "Pillow", "diffusers", "accelerate", "sentencepiece", "protobuf", "rembg")
+    .add_local_dir("src/trellis_app", "/root/trellis_app")
 )
 
 app = modal.App("trellis-3d", image=image)

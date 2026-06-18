@@ -52,9 +52,6 @@ image = (
         "git clone https://github.com/JeffreyXiang/FlexGEMM.git /tmp/FlexGEMM --recursive",
     )
     .run_commands(
-        "sed -i 's|pipeline.rembg_model = getattr(rembg,.*|pipeline.rembg_model = None|' /trellis2_src/trellis2/pipelines/trellis2_image_to_3d.py",
-    )
-    .run_commands(
         "CC=gcc CXX=g++ TORCH_CUDA_ARCH_LIST='8.0;9.0' CUDA_HOME=/usr/local/cuda-12.4 pip install /tmp/CuMesh --no-build-isolation",
         "CC=gcc CXX=g++ TORCH_CUDA_ARCH_LIST='8.0;9.0' CUDA_HOME=/usr/local/cuda-12.4 pip install /tmp/FlexGEMM --no-build-isolation",
         "CC=gcc CXX=g++ TORCH_CUDA_ARCH_LIST='8.0;9.0' CUDA_HOME=/usr/local/cuda-12.4 pip install /tmp/nvdiffrast --no-build-isolation",
@@ -65,7 +62,7 @@ image = (
         "pip install flash-attn==2.7.3",
     )
     .env({"PYTHONPATH": "/trellis2_src"})
-    .pip_install("modal", "boto3", "Pillow", "diffusers", "accelerate", "sentencepiece", "protobuf")
+    .pip_install("modal", "boto3", "Pillow", "diffusers", "accelerate", "sentencepiece", "protobuf", "rembg")
 )
 
 app = modal.App("trellis-3d", image=image)
@@ -96,7 +93,7 @@ class TrellisGenerator:
         self.pipeline.cuda()
 
     @modal.method()
-    def generate(self, prompt: str, seed: int = 42) -> str:
+    def generate(self, prompt: str, seed: int = 42, resolution: str = "512") -> str:
         import gc
         import tempfile
 
@@ -127,7 +124,7 @@ class TrellisGenerator:
         torch.cuda.empty_cache()
 
         print("[2/3] Generating 3D geometry + PBR materials...")
-        mesh = self.pipeline.run(image, seed=seed, preprocess_image=False)[0]
+        mesh = self.pipeline.run(image, seed=seed, preprocess_image=True, pipeline_type=resolution)[0]
         mesh.simplify(2_000_000)
 
         print("[3/3] Exporting GLB...")
@@ -159,7 +156,7 @@ class TrellisGenerator:
 
 
 @app.local_entrypoint()
-def main(prompt: str = "a chair"):
+def main(prompt: str = "a chair", resolution: str = "512"):
     generator = TrellisGenerator()
-    url = generator.generate.remote(prompt)
+    url = generator.generate.remote(prompt, resolution=resolution)
     print(f"\nDownload URL: {url}")

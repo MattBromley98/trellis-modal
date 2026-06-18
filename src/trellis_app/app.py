@@ -125,7 +125,7 @@ class TrellisGenerator:
 
         print("[2/3] Generating 3D geometry + PBR materials...")
         mesh = self.pipeline.run(image, seed=seed, preprocess_image=True, pipeline_type=resolution)[0]
-        mesh.simplify(2_000_000)
+        mesh.simplify(50_000)
 
         print("[3/3] Exporting GLB...")
         glb = o_voxel.postprocess.to_glb(
@@ -136,11 +136,11 @@ class TrellisGenerator:
             attr_layout=mesh.layout,
             voxel_size=mesh.voxel_size,
             aabb=[[-0.5, -0.5, -0.5], [0.5, 0.5, 0.5]],
-            decimation_target=1_000_000,
-            texture_size=4096,
-            remesh=False,
+            decimation_target=10_000,
+            texture_size=1024,
+            remesh=True,
             remesh_band=1,
-            remesh_project=0,
+            remesh_project=0.9,
             verbose=False,
         )
 

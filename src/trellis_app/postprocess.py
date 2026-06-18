@@ -79,7 +79,12 @@ def refine_pbr_materials(
             metallic_factor, roughness_factor,
         )
 
-    for geom in scene.geometry.values():
+    if isinstance(scene, trimesh.Scene):
+        meshes = scene.geometry.values()
+    else:
+        meshes = [scene]
+
+    for geom in meshes:
         if not isinstance(geom, trimesh.Trimesh):
             continue
         if not hasattr(geom.visual, 'material'):

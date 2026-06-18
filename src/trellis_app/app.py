@@ -137,8 +137,7 @@ class TrellisGenerator:
         out_dir = Path(tempfile.mkdtemp())
 
         print(f"[1/3] Generating image from prompt: {prompt!r}")
-        if next(self.flux.parameters()).device.type == "cpu":
-            self.flux.to("cuda")
+        self.flux.to("cuda")
         gen = torch.Generator("cuda").manual_seed(seed)
         image = self.flux(
             prompt,
